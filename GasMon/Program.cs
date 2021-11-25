@@ -1,9 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
+using CsvHelper;
+using GasMon.Models;
 using GasMon.S3Helper;
 using GasMon.SQS;
 
@@ -13,6 +20,7 @@ namespace GasMon
     {
         public static async Task Main()
         {
+            Console.WriteLine("Getting locations...");
             var locations = await S3Service.ReadObjectDataAsync();
             var sqsClient = new AmazonSQSClient(RegionEndpoint.EUWest1);
             var snsClient = new AmazonSimpleNotificationServiceClient(RegionEndpoint.EUWest1);
@@ -31,23 +39,36 @@ namespace GasMon
                 Console.WriteLine(location.ToString());
             }
 
-            Console.WriteLine("Waiting for 20s...");
-            DateTime now = DateTime.Now;
-            while (DateTime.Now.Subtract(now).Seconds < 60)
-            {
-                // wait for 20 seconds
-            }
-
             try
             {
-                var notifications = await SQSService.GetNotificationFromQueue(queue, sqsClient);
-                var validNotifications = notifications.Where(n => locationChecker.LocationIsValid(n));
-                var discarded = notifications.Where(n => !locationChecker.LocationIsValid(n));
-                Console.WriteLine($"Discarded {discarded.Count()} notifications with bad sensors");
-                foreach (var notification in validNotifications)
+                for (var i = 0; i < 5; i++)
                 {
-                    Console.WriteLine($"Number:{notifications.IndexOf(notification) + 1}");
-                    Console.WriteLine(notification.ToString());
+                    var sleepTime = 20;
+                    Console.WriteLine($"Waiting for {sleepTime}s...");
+                    Thread.Sleep(sleepTime * 1000);
+                    Console.WriteLine("Getting notifications...");
+
+                    var notifications = await SQSService.GetNotificationFromQueue(queue, sqsClient);
+                    var validNotifications = notifications
+                        .Where(n => locationChecker.LocationIsValid(n))
+                        .ToList();
+                    var discarded = notifications.Where(n => !locationChecker.LocationIsValid(n));
+                    Console.WriteLine($"Discarded {discarded.Count()} notifications with bad sensor");
+                    foreach (var notification in validNotifications)
+                    {
+                        Console.WriteLine($"Number:{validNotifications.IndexOf(notification) + 1}");
+                        Console.WriteLine(notification.ToString());
+                    }
+
+                    if (i == 0)
+                    {
+                        CsvManager.CreateCsv(validNotifications);
+                    }
+
+                    else
+                    {
+                        CsvManager.AppendCsv(validNotifications);
+                    }
                 }
             }
             catch (Exception e)
