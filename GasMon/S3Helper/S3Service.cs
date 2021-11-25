@@ -10,7 +10,7 @@ using GasMon.Models;
 
 namespace GasMon.S3Helper
 {
-    public class S3Helper
+    public class S3Service
     {
         private static readonly string BucketName = Environment.GetEnvironmentVariable("S3Bucket");
         private static readonly string KeyName = "locations.json";
