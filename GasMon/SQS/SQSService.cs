@@ -4,7 +4,6 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Amazon.S3.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using GasMon.Models;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.SimpleNotificationService;
@@ -15,23 +16,24 @@ namespace GasMon
             var locations = await S3Service.ReadObjectDataAsync();
             var sqsClient = new AmazonSQSClient(RegionEndpoint.EUWest1);
             var snsClient = new AmazonSimpleNotificationServiceClient(RegionEndpoint.EUWest1);
-            
+            var locationChecker = new LocationChecker(locations);
+
             // Create queue
             var queue = await SQSService.CreateQueue(sqsClient);
             var topicArn = Environment.GetEnvironmentVariable("SNSTopic");
-            
+
             //Subscribe Queue to SNS topic
             await snsClient.SubscribeQueueAsync(topicArn, sqsClient, queue.QueueUrl);
-            
+
             Console.WriteLine("Locations: ");
             foreach (var location in locations)
             {
                 Console.WriteLine(location.ToString());
             }
-            
+
             Console.WriteLine("Waiting for 20s...");
             DateTime now = DateTime.Now;
-            while (DateTime.Now.Subtract(now).Seconds < 20)
+            while (DateTime.Now.Subtract(now).Seconds < 60)
             {
                 // wait for 20 seconds
             }
@@ -39,9 +41,12 @@ namespace GasMon
             try
             {
                 var notifications = await SQSService.GetNotificationFromQueue(queue, sqsClient);
-                foreach (var notification in notifications)
+                var validNotifications = notifications.Where(n => locationChecker.LocationIsValid(n));
+                var discarded = notifications.Where(n => !locationChecker.LocationIsValid(n));
+                Console.WriteLine($"Discarded {discarded.Count()} notifications with bad sensors");
+                foreach (var notification in validNotifications)
                 {
-                    Console.WriteLine($"Number:{notifications.IndexOf(notification)}");
+                    Console.WriteLine($"Number:{notifications.IndexOf(notification) + 1}");
                     Console.WriteLine(notification.ToString());
                 }
             }
@@ -54,6 +59,5 @@ namespace GasMon
                 await SQSService.DeleteQueue(sqsClient, queue);
             }
         }
-        
     }
 }
