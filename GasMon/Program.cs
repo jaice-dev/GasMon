@@ -43,9 +43,9 @@ namespace GasMon
             {
                 var allNotifications = new List<Notification>();
 
-                for (var i = 0; i < 1; i++)
+                for (var i = 0; i < 5; i++)
                 {
-                    var sleepTime = 20;
+                    var sleepTime = 10;
                     Console.WriteLine($"Waiting for {sleepTime}s...");
                     Thread.Sleep(sleepTime * 1000);
                     Console.WriteLine("Getting notifications...");
@@ -68,22 +68,18 @@ namespace GasMon
                     //process all notifications into AveragedNotificationFormat
                     //remove records we have process from all notifications
                     
-                    foreach (var notification in allNotifications)
+                    
+                    // CsvManager.CreateCsv(allNotifications);
+
+                    if (i == 0)
                     {
-                        notification.DateTime = RoundDown(notification.DateTime, TimeSpan.FromMinutes(1));
+                        CsvManager.CreateCsv(validNotifications);
                     }
                     
-                    CsvManager.CreateCsv(allNotifications);
-
-                    // if (i == 0)
-                    // {
-                    //     CsvManager.CreateCsv(validNotifications);
-                    // }
-                    //
-                    // else
-                    // {
-                    //     CsvManager.AppendCsv(validNotifications);
-                    // }
+                    else
+                    {
+                        CsvManager.AppendCsv(validNotifications);
+                    }
                 }
             }
             catch (Exception e)
@@ -94,11 +90,6 @@ namespace GasMon
             {
                 await SQSService.DeleteQueue(sqsClient, queue);
             }
-        }
-        
-        public static DateTime RoundDown(DateTime dt, TimeSpan d)
-        {
-            return new DateTime((dt.Ticks / d.Ticks) * d.Ticks);
         }
     }
 }
