@@ -64,11 +64,7 @@ namespace GasMon
                         Console.WriteLine($"Number:{validNotifications.IndexOf(notification) + 1}");
                         Console.WriteLine(notification.ToString());
                     }
-                    
-                    //process all notifications into AveragedNotificationFormat
-                    //remove records we have process from all notifications
-                    
-                    
+
                     // CsvManager.CreateCsv(allNotifications);
 
                     if (i == 0)
@@ -79,6 +75,27 @@ namespace GasMon
                     else
                     {
                         CsvManager.AppendCsv(validNotifications);
+                    }
+                }
+                
+                var averagedNotifications = new List<AveragedNotification>();
+                // in csv, create a row for each location for each minute (averaging the value)
+                foreach (var notification in allNotifications)
+                {
+                    var found = averagedNotifications.Where(n =>
+                        n.LocationId == notification.locationId && n.Minute == notification.DateTime);
+                    if (!found.Any())
+                    {
+                        averagedNotifications.Add(new AveragedNotification
+                        {
+                            AverageValue = notification.value,
+                            LocationId = notification.locationId,
+                            Minute = notification.DateTime,
+                        });
+                    }
+                    else
+                    {
+                        found.First().
                     }
                 }
             }
