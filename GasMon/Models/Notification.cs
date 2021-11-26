@@ -9,7 +9,11 @@ namespace GasMon.Models
         public double value { get; set; }
         public long timestamp { get; set; }
 
-        public DateTime DateTime => DateTimeOffset.FromUnixTimeMilliseconds(timestamp).DateTime;
+        public DateTime DateTime
+        {
+            get => DateTimeOffset.FromUnixTimeMilliseconds(timestamp).DateTime;
+            set => DateTime = value;
+        }
 
         public override string ToString()
         {

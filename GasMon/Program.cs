@@ -41,17 +41,22 @@ namespace GasMon
 
             try
             {
-                for (var i = 0; i < 5; i++)
+                var allNotifications = new List<Notification>();
+
+                for (var i = 0; i < 1; i++)
                 {
                     var sleepTime = 20;
                     Console.WriteLine($"Waiting for {sleepTime}s...");
                     Thread.Sleep(sleepTime * 1000);
                     Console.WriteLine("Getting notifications...");
-
+                    
                     var notifications = await SQSService.GetNotificationFromQueue(queue, sqsClient);
                     var validNotifications = notifications
                         .Where(n => locationChecker.LocationIsValid(n))
                         .ToList();
+
+                    allNotifications.AddRange(validNotifications);
+
                     var discarded = notifications.Where(n => !locationChecker.LocationIsValid(n));
                     Console.WriteLine($"Discarded {discarded.Count()} notifications with bad sensor");
                     foreach (var notification in validNotifications)
@@ -59,16 +64,26 @@ namespace GasMon
                         Console.WriteLine($"Number:{validNotifications.IndexOf(notification) + 1}");
                         Console.WriteLine(notification.ToString());
                     }
-
-                    if (i == 0)
+                    
+                    //process all notifications into AveragedNotificationFormat
+                    //remove records we have process from all notifications
+                    
+                    foreach (var notification in allNotifications)
                     {
-                        CsvManager.CreateCsv(validNotifications);
+                        notification.DateTime = RoundDown(notification.DateTime, TimeSpan.FromMinutes(1));
                     }
+                    
+                    CsvManager.CreateCsv(allNotifications);
 
-                    else
-                    {
-                        CsvManager.AppendCsv(validNotifications);
-                    }
+                    // if (i == 0)
+                    // {
+                    //     CsvManager.CreateCsv(validNotifications);
+                    // }
+                    //
+                    // else
+                    // {
+                    //     CsvManager.AppendCsv(validNotifications);
+                    // }
                 }
             }
             catch (Exception e)
@@ -79,6 +94,11 @@ namespace GasMon
             {
                 await SQSService.DeleteQueue(sqsClient, queue);
             }
+        }
+        
+        public static DateTime RoundDown(DateTime dt, TimeSpan d)
+        {
+            return new DateTime((dt.Ticks / d.Ticks) * d.Ticks);
         }
     }
 }
